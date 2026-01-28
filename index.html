@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UGC Prompt Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .ingredient-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .ingredient-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+
+        .ingredient-card.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .ingredient-card.selected .card-title {
+            color: white;
+        }
+
+        .ingredient-card.selected .card-meta {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+            font-size: 0.95em;
+        }
+
+        .card-meta {
+            font-size: 0.85em;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .card-id {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            font-size: 0.7em;
+            color: #999;
+            font-family: monospace;
+        }
+
+        .ingredient-card.selected .card-id {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .optional-dialogue {
+            margin-bottom: 30px;
+        }
+
+        .optional-dialogue textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1em;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        .optional-dialogue textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .helper-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .result-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .selection-summary {
+            background: #e6fffa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .selection-summary.show {
+            display: block;
+        }
+
+        .summary-item {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .summary-label {
+            font-weight: 600;
+            color: #2c7a7b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 UGC Prompt Generator</h1>
+        <p class="subtitle">Create authentic UGC video prompts for single mothers sharing financial relief stories</p>
+
+        <!-- Selection Summary -->
+        <div class="selection-summary" id="selectionSummary"></div>
+
+        <!-- Character Selection -->
+        <div class="section">
+            <div class="section-title">👥 Select Character</div>
+            <div class="grid" id="charactersGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Energy Selection -->
+        <div class="section">
+            <div class="section-title">⚡ Select Energy</div>
+            <div class="grid" id="energyGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Problem Selection -->
+        <div class="section">
+            <div class="section-title">😰 Select Problem</div>
+            <div class="grid" id="problemsGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Benefit Selection -->
+        <div class="section">
+            <div class="section-title">✨ Select Benefit</div>
+            <div class="grid" id="benefitsGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Scenario Selection -->
+        <div class="section">
+            <div class="section-title">📍 Select Scenario</div>
+            <div class="grid" id="scenariosGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- CTA Selection -->
+        <div class="section">
+            <div class="section-title">📣 Select CTA</div>
+            <div class="grid" id="ctaGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Product Mention Selection -->
+        <div class="section">
+            <div class="section-title">💬 Select Product Mention</div>
+            <div class="grid" id="productMentionGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Video Opening Selection -->
+        <div class="section">
+            <div class="section-title">🎥 Select Video Opening</div>
+            <div class="grid" id="videoOpeningGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Optional Custom Dialogue -->
+        <div class="optional-dialogue">
+            <div class="section-title">💭 Custom Dialogue (Optional)</div>
+            <textarea 
+                id="customDialogue" 
+                placeholder="Leave empty for Claude to generate dialogue automatically, or type your own dialogue here (max 50 words)..."></textarea>
+            <div class="helper-text">If left empty, Claude will create dialogue combining the problem and benefit you selected.</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+            <button class="btn btn-primary" id="generateBtn" onclick="generatePrompt()">
+                Generate Prompt
+            </button>
+            <button class="btn btn-secondary" id="randomBtn" onclick="generateRandom()">
+                🎲 Random Generation
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating your UGC prompt...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div class="error" id="error"></div>
+
+        <!-- Result Display -->
+        <div class="result" id="result">
+            <div class="result-title">✅ Prompt Generated Successfully!</div>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURATION - UPDATE THESE WITH YOUR ACTUAL ENDPOINTS
+        const CONFIG = {
+            makeWebhookURL: 'YOUR_MAKE_WEBHOOK_URL_HERE', // You'll get this from Make.com
+            googleSheetsId: 'YOUR_GOOGLE_SHEETS_ID_HERE'
+        };
+
+        // Sample data structure - in production, this would come from your Google Sheets
+        // For now, using static data based on what we created together
+        const INGREDIENTS = {
+            characters: [
+                { id: 'char_01', name: 'Asian-American single mother', age: '27', preview: 'Beige hoodie, tired gentle' },
+                { id: 'char_16', name: 'Young Black mother', age: 'Late 20s', preview: 'Pajamas, natural curls, fuzzy socks' },
+                { id: 'char_15_baby', name: 'Latina mother with baby', age: '29', preview: 'Sage t-shirt, baby on shoulder' },
+                { id: 'char_19', name: 'Mixed Latina/White exhausted', age: '31', preview: 'Post-work, one sock, glasses in hair' }
+            ],
+            energy: [
+                { id: 'energy_01', name: 'Happy, confident, smiling', preview: 'Optimistic, empowered' },
+                { id: 'energy_02', name: 'Happy, emotional, moved', preview: 'Grateful, tearfully happy' },
+                { id: 'energy_03', name: 'Happy, shocked, surprised', preview: 'Disbelief, amazed' },
+                { id: 'energy_04', name: 'Happy, grateful, relieved', preview: 'Authentic gratitude, warm' }
+            ],
+            problems: [
+                { id: 'prob_02', name: 'Crying over unpaid bills', severity: 'Very High' },
+                { id: 'prob_04', name: 'Choosing between food and rent', severity: 'Very High' },
+                { id: 'prob_13', name: 'Eviction notice received', severity: 'Very High' },
+                { id: 'prob_21', name: 'Facing eviction this month', severity: 'Very High' }
+            ],
+            benefits: [
+                { id: 'ben_07', name: 'Sleeping through night again', timeframe: 'Within few days' },
+                { id: 'ben_04', name: 'Bought groceries without guilt', timeframe: 'Immediate' },
+                { id: 'ben_08', name: 'Avoided eviction', timeframe: 'Within 1 week' },
+                { id: 'ben_26', name: 'Covered whole rent', timeframe: 'Same day' }
+            ],
+            scenarios: [
+                { id: 'scen_01', name: 'Living room couch', time: 'Night 9-11pm' },
+                { id: 'scen_13', name: 'Apartment with kids playing', time: 'Afternoon' },
+                { id: 'scen_03', name: 'Bedroom at night', time: 'Late night' }
+            ],
+            cta: [
+                { id: 'cta_01', text: "Link's in my bio if you wanna check it out", style: 'Soft, casual' },
+                { id: 'cta_03', text: "Seriously, try it. Link's right here", style: 'Urgent' },
+                { id: 'cta_none', text: 'No CTA (pure testimonial)', style: 'Authentic' }
+            ],
+            productMention: [
+                { id: 'mention_04', text: 'this app that pays me while I scroll TikTok...' },
+                { id: 'mention_09', text: 'that [product] thing everybody keeps talking about' },
+                { id: 'mention_02', text: 'this financial relief program' }
+            ],
+            videoOpening: [
+                { id: 'open_01', name: 'Handheld from start', timing: 'Immediate' },
+                { id: 'open_02', name: 'Propped setup with run-in', timing: '0-2s setup' },
+                { id: 'open_06', name: 'Quick setup handheld', timing: '0-3s positioning' }
+            ]
+        };
+
+        // State management
+        const selected = {
+            character: null,
+            energy: null,
+            problem: null,
+            benefit: null,
+            scenario: null,
+            cta: null,
+            productMention: null,
+            videoOpening: null
+        };
+
+        // Populate grids on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            populateGrid('characters', INGREDIENTS.characters);
+            populateGrid('energy', INGREDIENTS.energy);
+            populateGrid('problems', INGREDIENTS.problems);
+            populateGrid('benefits', INGREDIENTS.benefits);
+            populateGrid('scenarios', INGREDIENTS.scenarios);
+            populateGrid('cta', INGREDIENTS.cta);
+            populateGrid('productMention', INGREDIENTS.productMention);
+            populateGrid('videoOpening', INGREDIENTS.videoOpening);
+        });
+
+        function populateGrid(type, items) {
+            const gridId = type + 'Grid';
+            const grid = document.getElementById(gridId);
+            
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'ingredient-card';
+                card.onclick = () => selectItem(type, item.id, card);
+                
+                let preview = '';
+                if (item.age) preview = `Age ${item.age} · ${item.preview}`;
+                else if (item.preview) preview = item.preview;
+                else if (item.severity) preview = `Severity: ${item.severity}`;
+                else if (item.timeframe) preview = `Timeframe: ${item.timeframe}`;
+                else if (item.time) preview = item.time;
+                else if (item.style) preview = `Style: ${item.style}`;
+                else if (item.timing) preview = `Timing: ${item.timing}`;
+                
+                card.innerHTML = `
+                    <div class="card-id">${item.id}</div>
+                    <div class="card-title">${item.name || item.text}</div>
+                    <div class="card-meta">${preview}</div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function selectItem(type, id, cardElement) {
+            // Deselect previous selection in this category
+            const grid = cardElement.parentElement;
+            grid.querySelectorAll('.ingredient-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Select new item
+            cardElement.classList.add('selected');
+            selected[type === 'energy' ? 'energy' : 
+                     type === 'problems' ? 'problem' :
+                     type === 'benefits' ? 'benefit' :
+                     type === 'scenarios' ? 'scenario' :
+                     type === 'productMention' ? 'productMention' :
+                     type === 'videoOpening' ? 'videoOpening' :
+                     type] = id;
+            
+            updateSelectionSummary();
+        }
+
+        function updateSelectionSummary() {
+            const summary = document.getElementById('selectionSummary');
+            const selections = Object.entries(selected).filter(([key, value]) => value !== null);
+            
+            if (selections.length > 0) {
+                summary.classList.add('show');
+                summary.innerHTML = '<strong>Current Selection:</strong><br>' +
+                    selections.map(([key, value]) => 
+                        `<div class="summary-item"><span class="summary-label">${capitalizeFirst(key)}:</span> ${value}</div>`
+                    ).join('');
+            } else {
+                summary.classList.remove('show');
+            }
+        }
+
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        async function generatePrompt() {
+            // Validate all selections
+            const required = ['character', 'energy', 'problem', 'benefit', 'scenario', 'cta', 'productMention', 'videoOpening'];
+            const missing = required.filter(key => !selected[key]);
+            
+            if (missing.length > 0) {
+                showError(`Please select: ${missing.join(', ')}`);
+                return;
+            }
+
+            const customDialogue = document.getElementById('customDialogue').value.trim();
+            
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('result').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+            
+            try {
+                const payload = {
+                    mode: 'manual',
+                    selections: selected,
+                    customDialogue: customDialogue || null
+                };
+                
+                // Call Make.com webhook
+                const response = await fetch(CONFIG.makeWebhookURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate prompt');
+                }
+                
+                const result = await response.json();
+                showResult(result);
+                
+            } catch (error) {
+                showError('Error generating prompt: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+
+        async function generateRandom() {
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('result').classList.remove('show');
+            document.getElementById('error').classList.remove('show');
+            
+            try {
+                const payload = {
+                    mode: 'random'
+                };
+                
+                const response = await fetch(CONFIG.makeWebhookURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate random prompt');
+                }
+                
+                const result = await response.json();
+                showResult(result);
+                
+            } catch (error) {
+                showError('Error generating random prompt: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+
+        function showResult(data) {
+            const resultContent = document.getElementById('resultContent');
+            resultContent.textContent = JSON.stringify(data, null, 2);
+            document.getElementById('result').classList.add('show');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+    </script>
+</body>
+</html>
